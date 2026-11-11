@@ -521,4 +521,12 @@
          For this time after the screen turns on, the Power Manager
          will not debounce light sensor readings -->
     <integer name="config_lightSensorWarmupTime">200</integer>
+
+    <!-- Biometric sensors, "<id>:<modality>:<strength>". The only sensor is the
+         software face unlock (TYPE_FACE = 8, BIOMETRIC_WEAK = 255), served through
+         the HIDL path. Without it, FaceService only sees the "virtual" face instance
+         and blocks waiting for IVirtualHal/virtual, which this build does not ship. -->
+    <string-array name="config_biometric_sensors" translatable="false">
+        <item>0:8:255</item>
+    </string-array>
 </resources>

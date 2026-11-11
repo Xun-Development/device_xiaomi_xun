@@ -49,3 +49,10 @@ repository the build needs on top of the LineageOS 24.0 manifest.
   [Xiaomi-Redmi-Pad-SE-Resources](https://github.com/Xiaomi-Redmi-Pad-SE-Resources),
   which has no lineage-24.0 branches yet, so their lineage-23.2 branches
   are used.
+- Face unlock is LMODroid's software implementation
+  ([FaceUnlock](https://github.com/LMODroid/platform_packages_apps_FaceUnlock),
+  [yifan](https://github.com/LMODroid/platform_external_yifan)). It uses the
+  front camera and open TFLite models, and needs the face unlock commits in
+  [android_frameworks_base](https://github.com/decoder-dev/android_frameworks_base).
+  It is a Class 2 (weak) biometric with no liveness check, so a photo can
+  fool it, and it cannot unlock apps that require strong biometrics.
