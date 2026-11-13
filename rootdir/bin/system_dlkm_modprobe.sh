@@ -10,11 +10,13 @@ VENDOR_DLKM_DIR="/vendor_dlkm/lib/modules"
 
 MODPROBE="/vendor/bin/modprobe"
 
-for dir in ${SYSTEM_DLKM_DIR} ;
+# Our image packages metadata at the module root; also accept release directories.
+for modules_load in "${SYSTEM_DLKM_DIR}/modules.load" "${SYSTEM_DLKM_DIR}"/*/modules.load ;
 do
-	if [ ! -e ${dir}/*/modules.load ]; then
+	if [ ! -f "${modules_load}" ]; then
 		continue
 	fi
+	module_dir=${modules_load%/*}
 	if [ -e ${VENDOR_DLKM_DIR}/system_dlkm.modules.blocklist ] && grep -q blocklist ${VENDOR_DLKM_DIR}/system_dlkm.modules.blocklist; then
 		blocklist_expr="$(sed -n -e 's/blocklist \(.*\)/\1/p' ${VENDOR_DLKM_DIR}/system_dlkm.modules.blocklist | sed -e 's/-/_/g' -e 's/^/-e /')"
 	else
@@ -22,20 +24,31 @@ do
 		blocklist_expr="-e %"
 	fi
 	# Filter out modules in blocklist - we would see unnecessary errors otherwise
-	load_modules=$(cat ${dir}/*/modules.load | grep -w -v ${blocklist_expr})
-	first_module=$(echo ${load_modules} | cut -d " " -f1)
-	other_modules=$(echo ${load_modules} | cut -d " " -f2-)
-	if ! ${MODPROBE} -b -s -d ${dir}/*/ -a ${first_module} > /dev/null ; then
-		continue
+	load_modules=$(grep -w -v ${blocklist_expr} "${modules_load}")
+	set -- ${load_modules}
+	if [ "$#" -eq 0 ]; then
+		exit 0
+	fi
+	first_module=$1
+	shift
+	if ! ${MODPROBE} -b -s -d "${module_dir}" -a "${first_module}" > /dev/null ; then
+		exit 1
 	fi
 	# load modules individually in case one of them fails to init
-	for module in ${other_modules}; do
-		( ${MODPROBE} -b -s -d ${dir}/*/ -a ${module} > /dev/null ) &
+	module_pids=
+	for module in "$@"; do
+		( ${MODPROBE} -b -s -d "${module_dir}" -a "${module}" > /dev/null ) &
+		module_pids="${module_pids} $!"
 	done
 
-	wait
+	load_status=0
+	for module_pid in ${module_pids}; do
+		if ! wait "${module_pid}"; then
+			load_status=1
+		fi
+	done
 
-	exit 0
+	exit "${load_status}"
 done
 
 exit 1
